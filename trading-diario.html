@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="YAGE">
+<title>YAGE · Trading Log</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;700;900&family=DM+Mono:wght@300;400&family=Playfair+Display:ital,wght@0,400;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #f5f3ef;
+    --surface:    #ffffff;
+    --surface2:   #f0ede8;
+    --border:     #e2ddd6;
+    --border2:    #ccc8c0;
+    --text:       #1a1814;
+    --text2:      #4a4540;
+    --muted:      #9a9088;
+    --muted2:     #d8d3cc;
+    --green:      #2d7a57;
+    --green-dim:  rgba(45,122,87,0.10);
+    --green-dot:  #3d9970;
+    --red:        #b5301f;
+    --red-dim:    rgba(181,48,31,0.10);
+    --red-dot:    #c0392b;
+    --accent:     #c8a96e;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 52px 24px 100px;
+  }
+
+  /* ── SYNC STATUS ── */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 32px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .sync-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted2);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .sync-dot.ok   { background: var(--green-dot); }
+  .sync-dot.err  { background: var(--red-dot); }
+  .sync-dot.spin { animation: pulse 1s infinite; background: var(--accent); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── GREETING ── */
+  .greeting { margin-bottom: 48px; }
+  .greeting-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .greeting-phrase {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+    padding: 0;
+    background: transparent;
+    border-left: none;
+    border-radius: 0;
+  }
+  .greeting-phrase.weekend {
+    color: var(--muted);
+    border-left: none;
+  }
+  .greeting-date {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 200;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+  }
+
+  /* ── STATS ── */
+  .header { margin-bottom: 36px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .stats-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .stat-card.accent-card {
+    background: var(--text);
+    border-color: var(--text);
+  }
+  .stat-value {
+    font-family: 'Inter', sans-serif;
+    font-size: 40px;
+    font-weight: 900;
+    color: var(--green);
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: -0.03em;
+  }
+  .stat-value.white { color: #fff; font-size: 36px; }
+  .stat-value.neutral { color: var(--text); }
+  .stat-value.sm { font-size: 28px; }
+  .stat-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .stat-label.white { color: rgba(255,255,255,0.45); }
+
+  /* ── SUMMARY ── */
+  .month-summary-btn {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: var(--muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    transition: border-color 0.2s;
+  }
+  .month-summary-btn:hover { border-color: var(--border2); color: var(--text2); }
+
+  .summary-panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 8px;
+    animation: fadeIn 0.2s ease;
+  }
+  .summary-panel.open { display: block; }
+  @keyframes fadeIn {
+    from { opacity:0; transform:translateY(-6px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .summary-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .summary-item { text-align:center; padding:12px 8px; border-radius:8px; background:var(--surface2); }
+  .summary-num { font-family:'Inter',sans-serif; font-size:28px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+  .summary-num.g { color:var(--green); }
+  .summary-num.r { color:var(--red); }
+  .summary-num.n { color:var(--text); }
+  .summary-lbl { font-size:10px; font-weight:300; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+
+  /* ── YEAR NAV ── */
+  .year-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 36px;
+    margin-bottom: 14px;
+  }
+  .section-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .year-nav-btns { display:flex; gap:4px; align-items:center; }
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .nav-btn:hover { border-color: var(--border2); color: var(--text); }
+  .nav-btn:disabled { opacity: 0.25; pointer-events: none; }
+  .nav-year {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--text);
+    min-width: 48px;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── MONTHS ── */
+  .months-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:48px; }
+  .month-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .month-card.current-month { border-color: var(--border2); }
+  .month-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .month-card.current-month .month-name { color: var(--green); }
+
+  .days-dots { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+
+  .dot-wrap { position:relative; width:100%; aspect-ratio:1; }
+
+  .dot-wrap[data-day]:not(.spacer):hover::after {
+    content: attr(data-day);
+    position: absolute;
+    bottom: calc(100% + 5px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: var(--bg);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .dot {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--muted2);
+    cursor: pointer;
+    transition: transform 0.12s, background 0.12s;
+  }
+  .dot-wrap:not(.spacer):hover .dot { transform: scale(1.4); }
+  .dot.good        { background: var(--green-dot); }
+  .dot.bad         { background: var(--red-dot); }
+  .dot.today       { background: transparent; border: 1.5px solid var(--border2); }
+  .dot.today.good  { border-color: var(--green-dot); background: var(--green-dot); }
+  .dot.today.bad   { border-color: var(--red-dot);   background: var(--red-dot); }
+  .dot.weekend     { opacity: 0.15; cursor:default; pointer-events:none; background: var(--muted2); }
+  .dot.spacer-dot  { background: transparent; pointer-events:none; }
+  .dot.future      { background: var(--muted2); opacity:0.2; pointer-events:none; cursor:default; }
+  .dot.past-unlogged { background: var(--muted2); opacity:0.5; }
+
+  /* ── MODAL ── */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(26,24,20,0.6);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  .overlay.open { display:flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 20px 20px 0 0;
+    padding: 28px 24px 48px;
+    width: 100%; max-width: 720px;
+    animation: slideUp 0.22s ease;
+  }
+  @keyframes slideUp {
+    from { transform:translateY(24px); opacity:0; }
+    to   { transform:translateY(0);    opacity:1; }
+  }
+
+  .modal-pill {
+    width: 36px; height: 4px;
+    background: var(--muted2);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-date-small {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .modal-date-big {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 24px;
+    line-height: 1.2;
+  }
+  .modal-question {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .big-buttons { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .big-btn {
+    padding: 22px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .big-btn.good-btn:hover { background:var(--green-dim); border-color:var(--green); color:var(--green); }
+  .big-btn.bad-btn:hover,
+  .big-btn.bad-btn.active { background:var(--red-dim); border-color:var(--red); color:var(--red); }
+
+  .no-op-btn {
+    width:100%; padding:13px; border-radius:10px;
+    border:1px solid var(--border); background:transparent;
+    color:var(--muted); font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:300; cursor:pointer; transition:all 0.15s;
+  }
+  .no-op-btn:hover { border-color:var(--border2); color:var(--text2); }
+
+  .reason-option {
+    display:flex; align-items:center; gap:12px;
+    padding:13px 15px; border-radius:8px;
+    border:1px solid var(--border); margin-bottom:8px;
+    cursor:pointer; transition:all 0.15s;
+    color:var(--text2); font-size:13px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+  }
+  .reason-option:hover    { border-color:var(--red); background:var(--red-dim); color:var(--text); }
+  .reason-option.selected { border-color:var(--red); background:var(--red-dim); color:var(--text); }
+
+  .reason-check {
+    width:18px; height:18px; border-radius:50%;
+    border:1.5px solid var(--muted2); flex-shrink:0;
+    transition:all 0.15s; display:flex; align-items:center; justify-content:center;
+  }
+  .reason-option.selected .reason-check { border-color:var(--red); background:var(--red); }
+  .reason-check::after { content:''; width:6px; height:6px; border-radius:50%; background:#fff; display:none; }
+  .reason-option.selected .reason-check::after { display:block; }
+
+  .other-input {
+    width:100%; background:var(--surface2);
+    border:1px solid var(--border); border-radius:8px;
+    padding:12px 15px; color:var(--text);
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:300;
+    outline:none; margin-top:8px; resize:none;
+    transition:border-color 0.15s;
+  }
+  .other-input:focus { border-color:var(--border2); }
+  .other-input::placeholder { color:var(--muted); }
+
+  .modal-actions { display:flex; gap:8px; margin-top:18px; }
+  .btn-cancel {
+    flex:1; padding:13px; border-radius:8px;
+    border:1px solid var(--border); background:transparent;
+    color:var(--muted); font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:300; cursor:pointer; transition:all 0.15s;
+  }
+  .btn-cancel:hover { color:var(--text2); border-color:var(--border2); }
+  .btn-save {
+    flex:2; padding:13px; border-radius:8px; border:none;
+    background:var(--text); color:var(--surface);
+    font-family:'Inter',sans-serif; font-size:14px;
+    font-weight:700; cursor:pointer; transition:opacity 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .btn-save:hover { opacity:0.85; }
+
+  /* ── LOADING ── */
+  .loading-screen {
+    position: fixed; inset:0;
+    background: var(--bg);
+    display: flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:16px;
+    z-index: 200;
+    transition: opacity 0.4s;
+  }
+  .loading-screen.hidden { opacity:0; pointer-events:none; }
+  .loading-logo {
+    font-family: 'Inter', sans-serif;
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: var(--text);
+  }
+  .loading-sub {
+    font-size: 11px;
+    font-weight: 300;
+    color: var(--muted);
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.08em;
+    animation: pulse 1.2s infinite;
+  }
+
+  @media (max-width:480px) {
+    .months-grid { grid-template-columns:repeat(2,1fr); }
+    .stats { grid-template-columns:1fr 1fr; }
+    .stats-bottom { grid-template-columns:1fr 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">YAGE</div>
+  <div class="loading-sub">sincronizando datos...</div>
+</div>
+
+<div class="app">
+
+  <!-- SYNC STATUS -->
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncLabel">conectando...</span>
+  </div>
+
+  <!-- GREETING -->
+  <div class="greeting">
+    <div class="greeting-name">YAGE</div>
+    <div class="greeting-phrase" id="greetingPhrase"></div>
+    <div class="greeting-date" id="greetingDate"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="header">
+    <div class="stats">
+      <div class="stat-card accent-card">
+        <div class="stat-value white" id="currentStreak">0</div>
+        <div class="stat-label white">racha actual</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value neutral" id="bestStreak">0</div>
+        <div class="stat-label">mejor racha</div>
+      </div>
+    </div>
+    <div class="stats-bottom" style="margin-top:8px">
+      <div class="stat-card">
+        <div class="stat-value sm" id="annualPct" style="color:var(--green)">—</div>
+        <div class="stat-label">disciplina anual</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value sm" id="totalGood" style="color:var(--green)">0</div>
+        <div class="stat-label">días buenos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value sm" id="totalBad" style="color:var(--red)">0</div>
+        <div class="stat-label">días malos</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTH SUMMARY -->
+  <button class="month-summary-btn" onclick="toggleSummary()">
+    <span>Resumen del mes</span>
+    <span id="summaryArrow">›</span>
+  </button>
+  <div class="summary-panel" id="summaryPanel">
+    <div class="summary-title" id="summaryTitle"></div>
+    <div class="summary-grid">
+      <div class="summary-item"><div class="summary-num g" id="sumGood">0</div><div class="summary-lbl">buenos</div></div>
+      <div class="summary-item"><div class="summary-num r" id="sumBad">0</div><div class="summary-lbl">malos</div></div>
+      <div class="summary-item"><div class="summary-num n" id="sumRate">—</div><div class="summary-lbl">éxito</div></div>
+    </div>
+  </div>
+
+  <!-- YEAR NAV -->
+  <div class="year-nav">
+    <div class="section-label">Vista anual</div>
+    <div class="year-nav-btns">
+      <button class="nav-btn" id="prevYearBtn" onclick="changeYear(-1)">‹</button>
+      <span class="nav-year" id="navYear"></span>
+      <button class="nav-btn" id="nextYearBtn" onclick="changeYear(1)">›</button>
+    </div>
+  </div>
+
+  <div class="months-grid" id="monthsGrid"></div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-pill"></div>
+    <div class="modal-date-small" id="modalDateSmall"></div>
+    <div class="modal-date-big"   id="modalDateBig"></div>
+    <div id="step1">
+      <div class="modal-question">¿Cómo ha ido hoy?</div>
+      <div class="big-buttons">
+        <button class="big-btn good-btn" onclick="selectDay('good')">Bien ✓</button>
+        <button class="big-btn bad-btn" id="badBtn" onclick="selectDay('bad')">Mal ✗</button>
+      </div>
+      <button class="no-op-btn" onclick="selectDay('noop')">No he operado hoy</button>
+    </div>
+    <div id="step2" style="display:none">
+      <div class="modal-question">¿Qué pasó? <span style="font-size:11px;text-transform:none;letter-spacing:0;color:var(--muted)">(puedes marcar varios)</span></div>
+      <div class="reason-option" onclick="toggleReason(this,'overtraded')">
+        <div class="reason-check"></div><span>Sobreoperé — más trades de los permitidos</span>
+      </div>
+      <div class="reason-option" onclick="toggleReason(this,'schedule')">
+        <div class="reason-check"></div><span>No respeté mi horario — operé fuera de mi ventana</span>
+      </div>
+      <div class="reason-option" onclick="toggleReason(this,'lotsize')">
+        <div class="reason-check"></div><span>Subí el lotaje — por emoción o para recuperar</span>
+      </div>
+      <div class="reason-option" onclick="toggleReason(this,'nosetup')">
+        <div class="reason-check"></div><span>Entré sin criterio — el setup no estaba, entré por entrar</span>
+      </div>
+      <textarea class="other-input" id="otherReason" rows="2" placeholder="Otra razón..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="goBack()">← Volver</button>
+        <button class="btn-save" onclick="saveEntry()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ──
+const TODAY     = new Date();
+const TODAY_KEY = dateKey(TODAY);
+const THIS_YEAR = TODAY.getFullYear();
+const MIN_YEAR  = 2020;
+let MAX_YEAR    = Math.max(THIS_YEAR, 2030);
+
+const MONTHS_ES   = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+const MONTHS_LONG = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS_ES     = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+// ── STATE ──
+let viewYear        = THIS_YEAR;
+let selectedDateKey = null;
+let currentResult   = null;
+let selectedReasons = new Set();
+let cloudData       = {};   // { "2026": {...entries}, "2027": {...} }
+
+// ── STORAGE HELPERS ──
+const STORAGE_KEY = 'yage-trading-log';
+
+async function loadCloud() {
+  setSyncState('spin', 'sincronizando...');
+  try {
+    const res = await window.storage.get(STORAGE_KEY);
+    cloudData = res ? JSON.parse(res.value) : {};
+    setSyncState('ok', 'sincronizado');
+  } catch(e) {
+    // Fallback to localStorage
+    try {
+      const local = localStorage.getItem(STORAGE_KEY);
+      cloudData = local ? JSON.parse(local) : {};
+      setSyncState('err', 'sin conexión · datos locales');
+    } catch { cloudData = {}; setSyncState('err', 'error'); }
+  }
+}
+
+async function saveCloud() {
+  setSyncState('spin', 'guardando...');
+  // Always persist locally too
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData)); } catch {}
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(cloudData));
+    setSyncState('ok', 'guardado');
+  } catch {
+    setSyncState('err', 'guardado solo local');
+  }
+}
+
+function setSyncState(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+function getEntries(yr) {
+  return cloudData[yr] || {};
+}
+function setEntries(yr, data) {
+  cloudData[yr] = data;
+}
+
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── GREETING ──
+function renderGreeting() {
+  const dow   = TODAY.getDay();
+  const day   = TODAY.getDate();
+  const month = MONTHS_LONG[TODAY.getMonth()].toLowerCase();
+  const yr    = TODAY.getFullYear();
+  const name  = DAYS_ES[dow];
+
+  document.getElementById('greetingDate').textContent =
+    name.charAt(0).toUpperCase() + name.slice(1) + ', ' + day + ' de ' + month + ' de ' + yr;
+
+  const el = document.getElementById('greetingPhrase');
+  const pools = {
+    we: ['El mercado descansa. Tú también puedes.','Fin de semana. Recarga. El lunes vuelve la oportunidad.','Mercado cerrado. Buen momento para revisar, no para operar.','Dos días sin mercado. Prepárate bien para la semana.'],
+    1:  ['Nueva semana. Pizarra en blanco. Empieza fuerte.','Lunes. La semana entera por delante. Ejecuta tu plan.','Semana nueva, mismas reglas. Sigue el proceso.','Empieza como quieres acabar el viernes.'],
+    2:  ['Ya tienes el lunes encima. Mantén el ritmo.','Segundo día. La consistencia se construye aquí, no en los grandes días.','Sigue el plan, no las emociones.','Un día más para demostrar que eres consistente.'],
+    3:  ['Mitad de semana. Sin relajarse.','Los traders disciplinados no tienen días flojos.','Hoy también cuenta. Cada día suma a la racha.','El proceso no negocia días libres entre semana.'],
+    4:  ['Casi viernes. No te adelantes.','Queda poco, pero los errores aquí también duelen.','A un día del cierre. Máxima concentración.','El partido se gana en los últimos minutos. No te confíes.'],
+    5:  ['Último día de trading de la semana. Ciérrala bien.','Si la semana ha ido bien, no lo eches a perder ahora.','Hoy es el último. Que cuente.','Cierra la semana como la empezaste: con disciplina.'],
+  };
+  const isWE = dow === 0 || dow === 6;
+  const pool = isWE ? pools.we : pools[dow];
+  el.textContent = pool[Math.floor(Math.random() * pool.length)];
+  el.className   = 'greeting-phrase' + (isWE ? ' weekend' : '');
+}
+
+// ── STATS ──
+function renderStats() {
+  const entries = getEntries(THIS_YEAR);
+  let current = 0, best = 0, good = 0, bad = 0;
+  const d = new Date(THIS_YEAR, 0, 1);
+  while (d <= TODAY) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) {
+      const k = dateKey(d);
+      const e = entries[k];
+      if (e) {
+        if (e.result === 'good' || e.result === 'noop') {
+          current++; good++;
+          if (current > best) best = current;
+        } else { bad++; current = 0; }
+      } else if (new Date(k) < TODAY) { current = 0; }
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  const total = good + bad;
+  const pct   = total > 0 ? Math.round((good/total)*100) : null;
+
+  document.getElementById('currentStreak').textContent = current;
+  document.getElementById('bestStreak').textContent    = best;
+  document.getElementById('totalGood').textContent     = good;
+  document.getElementById('totalBad').textContent      = bad;
+  document.getElementById('annualPct').textContent     = pct !== null ? pct + '%' : '—';
+  document.getElementById('annualPct').style.color     = pct === null ? 'var(--muted)' : pct >= 70 ? 'var(--green)' : pct >= 40 ? '#c47c2e' : 'var(--red)';
+}
+
+// ── SUMMARY ──
+function renderSummary() {
+  const m = TODAY.getMonth(), yr = TODAY.getFullYear();
+  const entries = getEntries(yr);
+  document.getElementById('summaryTitle').textContent = MONTHS_LONG[m] + ' ' + yr;
+  let good = 0, bad = 0;
+  for (let day = 1; day <= new Date(yr,m+1,0).getDate(); day++) {
+    const date = new Date(yr,m,day);
+    if (date.getDay()===0||date.getDay()===6||date>TODAY) continue;
+    const e = entries[dateKey(date)];
+    if (!e) continue;
+    if (e.result==='good'||e.result==='noop') good++;
+    else if (e.result==='bad') bad++;
+  }
+  const total = good+bad;
+  document.getElementById('sumGood').textContent = good;
+  document.getElementById('sumBad').textContent  = bad;
+  document.getElementById('sumRate').textContent = total>0 ? Math.round((good/total)*100)+'%' : '—';
+}
+
+function toggleSummary() {
+  const open = document.getElementById('summaryPanel').classList.toggle('open');
+  document.getElementById('summaryArrow').textContent = open ? '↓' : '›';
+}
+
+// ── YEAR NAV ──
+function changeYear(delta) {
+  viewYear = Math.max(MIN_YEAR, viewYear + delta);
+  if (viewYear >= MAX_YEAR) MAX_YEAR = viewYear + 10;
+  renderYearView();
+}
+
+function renderYearView() {
+  document.getElementById('navYear').textContent  = viewYear;
+  document.getElementById('prevYearBtn').disabled = viewYear <= MIN_YEAR;
+  document.getElementById('nextYearBtn').disabled = false;
+  renderMonths();
+}
+
+// ── MONTHS ──
+function renderMonths() {
+  const grid       = document.getElementById('monthsGrid');
+  const entries    = getEntries(viewYear);
+  const isCurrYear = viewYear === THIS_YEAR;
+  grid.innerHTML   = '';
+
+  for (let m = 0; m < 12; m++) {
+    const isFutureMonth = viewYear > THIS_YEAR ||
+      (viewYear === THIS_YEAR && m > TODAY.getMonth());
+
+    const card     = document.createElement('div');
+    card.className = 'month-card' +
+      (isCurrYear && m === TODAY.getMonth() ? ' current-month' : '');
+
+    const lbl       = document.createElement('div');
+    lbl.className   = 'month-name';
+    lbl.textContent = MONTHS_ES[m];
+    card.appendChild(lbl);
+
+    const wrap     = document.createElement('div');
+    wrap.className = 'days-dots';
+
+    const daysInMonth = new Date(viewYear, m+1, 0).getDate();
+    const firstDow    = new Date(viewYear, m, 1).getDay();
+    const offset      = firstDow === 0 ? 6 : firstDow - 1;
+
+    for (let s = 0; s < offset; s++) {
+      const dw = document.createElement('div');
+      dw.className = 'dot-wrap spacer';
+      const dt = document.createElement('div');
+      dt.className = 'dot spacer-dot';
+      dw.appendChild(dt); wrap.appendChild(dw);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date      = new Date(viewYear, m, day);
+      const dow       = date.getDay();
+      const isWeekend = dow === 0 || dow === 6;
+      const k         = dateKey(date);
+      const e         = entries[k];
+      const isFuture  = date > TODAY;
+      const isToday   = isCurrYear && k === TODAY_KEY;
+
+      const dw       = document.createElement('div');
+      dw.className   = 'dot-wrap';
+      dw.dataset.day = day;
+
+      const dt = document.createElement('div');
+      let cls  = 'dot';
+
+      if (isWeekend) {
+        cls += ' weekend';
+      } else {
+        if (isToday)  cls += ' today';
+        if (isFuture) cls += ' future';
+        if (e) {
+          if (e.result==='good'||e.result==='noop') cls += ' good';
+          else if (e.result==='bad') cls += ' bad';
+        } else if (!isFuture && !isToday) {
+          cls += ' past-unlogged';
+        }
+        if (!isFuture) {
+          dw.style.cursor = 'pointer';
+          dw.addEventListener('click', () => openModal(k, date));
+        }
+      }
+
+      dt.className = cls;
+      dw.appendChild(dt); wrap.appendChild(dw);
+    }
+
+    card.appendChild(wrap);
+    grid.appendChild(card);
+  }
+}
+
+// ── MODAL ──
+function openModal(key, date) {
+  selectedDateKey = key;
+  currentResult   = null;
+  selectedReasons = new Set();
+
+  const dow  = date.getDay();
+  const day  = date.getDate();
+  const mon  = MONTHS_LONG[date.getMonth()].toLowerCase();
+  const yr   = date.getFullYear();
+  const name = DAYS_ES[dow];
+
+  document.getElementById('modalDateSmall').textContent =
+    name.toUpperCase() + ' · ' + day + ' ' + mon.toUpperCase().slice(0,3) + ' ' + yr;
+  document.getElementById('modalDateBig').textContent =
+    name.charAt(0).toUpperCase() + name.slice(1) + ' ' + day + ' de ' + mon;
+
+  showStep(1);
+  document.querySelectorAll('.reason-option').forEach(r => r.classList.remove('selected'));
+  document.getElementById('otherReason').value = '';
+  document.getElementById('badBtn').classList.remove('active');
+
+  const e = getEntries(yr)[key];
+  if (e && e.result === 'bad') {
+    showStep(2);
+    (e.reasons || []).forEach(r => {
+      const el = document.querySelector(`.reason-option[onclick*="'${r}'"]`);
+      if (el) { el.classList.add('selected'); selectedReasons.add(r); }
+    });
+    if (e.otherReason) document.getElementById('otherReason').value = e.otherReason;
+  }
+
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  selectedDateKey = null; currentResult = null;
+}
+
+function handleOverlayClick(ev) {
+  if (ev.target === document.getElementById('overlay')) closeModal();
+}
+
+function showStep(n) {
+  document.getElementById('step1').style.display = n===1 ? 'block' : 'none';
+  document.getElementById('step2').style.display = n===2 ? 'block' : 'none';
+}
+
+function selectDay(result) {
+  currentResult = result;
+  if (result === 'good' || result === 'noop') {
+    const yr      = parseInt(selectedDateKey.split('-')[0]);
+    const entries = getEntries(yr);
+    entries[selectedDateKey] = { result };
+    setEntries(yr, entries);
+    closeModal();
+    render();
+    saveCloud();
+  } else {
+    document.getElementById('badBtn').classList.add('active');
+    showStep(2);
+  }
+}
+
+function goBack() {
+  currentResult = null;
+  document.getElementById('badBtn').classList.remove('active');
+  showStep(1);
+}
+
+function toggleReason(el, key) {
+  el.classList.toggle('selected');
+  selectedReasons.has(key) ? selectedReasons.delete(key) : selectedReasons.add(key);
+}
+
+function saveEntry() {
+  if (!selectedDateKey) return;
+  const yr      = parseInt(selectedDateKey.split('-')[0]);
+  const entries = getEntries(yr);
+  entries[selectedDateKey] = {
+    result: 'bad',
+    reasons: [...selectedReasons],
+    otherReason: document.getElementById('otherReason').value.trim(),
+  };
+  setEntries(yr, entries);
+  closeModal();
+  render();
+  saveCloud();
+}
+
+// ── RENDER ──
+function render() {
+  renderGreeting();
+  renderStats();
+  renderSummary();
+  renderYearView();
+}
+
+// ── INIT ──
+async function init() {
+  await loadCloud();
+  render();
+  // Hide loading screen
+  const ls = document.getElementById('loadingScreen');
+  ls.classList.add('hidden');
+  setTimeout(() => ls.style.display = 'none', 400);
+}
+
+init();
+</script>
+</body>
+</html>
